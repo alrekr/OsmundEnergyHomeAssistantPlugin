@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for leaked secrets
+        run: python3 scripts/check_secrets.py
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies
+        run: uv sync --frozen || uv sync
+
+      - name: Lint with ruff
+        run: uv run ruff check .
+
+      - name: Run unit tests
+        run: uv run pytest

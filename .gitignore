@@ -221,3 +221,13 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local secrets & environment files (keep API keys out of git)
+.env.*
+!.env.example
+secrets.yaml
+*.local
+
+# Local Home Assistant development config directory
+config/
+

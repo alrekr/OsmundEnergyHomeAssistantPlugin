@@ -1,0 +1,33 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Osmund Energi",
+        "description": "Enter your personal Osmund Energi API key created on My page (https://osmundenergi.dk/min-side#api). Requires Osmund Plus on at least one location.",
+        "data": {
+          "api_key": "API key"
+        },
+        "data_description": {
+          "api_key": "Your personal Osmund Energi API key starting with osm_."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate Osmund Energi",
+        "description": "Your Osmund Energi API key is invalid, expired, or revoked. Create a new key on My page and enter it below.",
+        "data": {
+          "api_key": "API key"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the Osmund Energi API. Please try again.",
+      "invalid_auth": "Invalid, expired, or revoked API key.",
+      "no_api_access": "No locations on this account have Osmund Plus API access enabled.",
+      "unknown": "Unexpected error occurred."
+    },
+    "abort": {
+      "already_configured": "This Osmund Energi API key is already configured.",
+      "reauth_successful": "Reauthentication was successful."
+    }
+  }
+}

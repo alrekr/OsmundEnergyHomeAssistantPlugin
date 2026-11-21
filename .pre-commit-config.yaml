@@ -1,0 +1,14 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.6
+    hooks:
+      - id: ruff
+      - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: check-osmund-secrets
+        name: Prevent committing .env or Osmund API keys
+        entry: python3 scripts/check_secrets.py --staged
+        language: system
+        pass_filenames: false

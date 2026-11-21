@@ -1,0 +1,18 @@
+{
+  "domain": "osmund_energi",
+  "name": "Osmund Energi",
+  "categories": [
+    "energy.energy_prices",
+    "energy.meters_monitoring"
+  ],
+  "codeowners": [
+    "@alrekr"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/alrekr/OsmundEnergyHomeAssistantPlugin",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/alrekr/OsmundEnergyHomeAssistantPlugin/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}
