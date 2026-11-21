@@ -1,0 +1,200 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Forbind til Osmund Energi",
+        "description": "Indtast din personlige Osmund Energi API-nøgle oprettet på Min side ({api_url}). Kræver Osmund Plus på mindst én lokation.",
+        "data": {
+          "api_key": "API-nøgle",
+          "redact_location_labels": "Skjul lokationsnavne i diagnostik"
+        },
+        "data_description": {
+          "api_key": "Din personlige Osmund Energi API-nøgle, som starter med osm_.",
+          "redact_location_labels": "Skjul lokationsnavne ved eksport af diagnostik (anbefales, hvis dit navn i appen indeholder en vejnavnsadresse)."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Gengodkend Osmund Energi",
+        "description": "Din Osmund Energi API-nøgle er ugyldig, udløbet eller tilbagekaldt. Opret en ny nøgle på Min side og indtast den nedenfor.",
+        "data": {
+          "api_key": "API-nøgle"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Kunne ikke oprette forbindelse til Osmund Energi API. Prøv igen.",
+      "invalid_auth": "Ugyldig, udløbet eller tilbagekaldt API-nøgle.",
+      "no_api_access": "Ingen lokationer på denne konto har Osmund Plus API-adgang aktiveret.",
+      "unknown": "Der opstod en uventet fejl."
+    },
+    "abort": {
+      "already_configured": "Denne Osmund Energi API-nøgle er allerede konfigureret.",
+      "reauth_successful": "Gengodkendelse lykkedes."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Indstillinger for Osmund Energi",
+        "data": {
+          "price_resolution": "Opløsning på elpriser",
+          "redact_location_labels": "Skjul lokationsnavne i diagnostik"
+        },
+        "data_description": {
+          "price_resolution": "Automatisk følger målerens opløsning på hver lokation (15 minutter eller time) og falder tilbage til time.",
+          "redact_location_labels": "Skjul lokationsnavne ved eksport af diagnostik (anbefales, hvis dit navn i appen indeholder en vejnavnsadresse)."
+        }
+      }
+    }
+  },
+  "selector": {
+    "price_resolution": {
+      "options": {
+        "auto": "Automatisk (følg målerens opløsning)",
+        "hourly": "Time (60 min)",
+        "quarter_hourly": "Kvarter (15 min)"
+      }
+    },
+    "service_price_day": {
+      "options": {
+        "today": "I dag",
+        "tomorrow": "I morgen",
+        "both": "I dag og i morgen"
+      }
+    },
+    "service_price_resolution": {
+      "options": {
+        "hourly": "Time (60 min)",
+        "quarter_hourly": "Kvarter (15 min)"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "current_price": {
+        "name": "Aktuel elpris"
+      },
+      "current_price_ex_vat": {
+        "name": "Aktuel elpris (ekskl. moms)"
+      },
+      "current_spot_price": {
+        "name": "Aktuel spotpris"
+      },
+      "current_tariff": {
+        "name": "Aktuel nettarif"
+      },
+      "next_price": {
+        "name": "Næste elpris"
+      },
+      "today_min_price": {
+        "name": "Laveste pris i dag"
+      },
+      "today_min_price_at": {
+        "name": "Tidspunkt for laveste pris i dag"
+      },
+      "today_max_price": {
+        "name": "Højeste pris i dag"
+      },
+      "today_avg_price": {
+        "name": "Gennemsnitspris i dag"
+      },
+      "tomorrow_min_price": {
+        "name": "Laveste pris i morgen"
+      },
+      "tomorrow_max_price": {
+        "name": "Højeste pris i morgen"
+      },
+      "tomorrow_avg_price": {
+        "name": "Gennemsnitspris i morgen"
+      },
+      "latest_daily_consumption": {
+        "name": "Seneste dagsforbrug"
+      },
+      "current_month_consumption": {
+        "name": "Forbrug denne måned"
+      },
+      "consumption_through": {
+        "name": "Forbrugsdata til og med"
+      },
+      "standby_power": {
+        "name": "Standbyforbrug"
+      },
+      "current_month_cost": {
+        "name": "Udgifter denne måned"
+      },
+      "current_month_consumption_cost": {
+        "name": "Forbrugsudgifter denne måned"
+      },
+      "current_month_subscriptions_cost": {
+        "name": "Abonnementsudgifter denne måned"
+      },
+      "latest_daily_cost": {
+        "name": "Seneste dagsudgift"
+      },
+      "rated_through": {
+        "name": "Prissatte data til og med"
+      },
+      "supply_state": {
+        "name": "Leveringsstatus",
+        "state": {
+          "active": "Aktiv",
+          "upcoming": "Kommende",
+          "pending": "Afventer",
+          "ended": "Afsluttet"
+        }
+      },
+      "plus_status": {
+        "name": "Osmund Plus-status",
+        "state": {
+          "included": "Inkluderet",
+          "trial": "Prøveperiode",
+          "active": "Aktiv",
+          "none": "Ingen"
+        }
+      },
+      "meter_resolution": {
+        "name": "Måleropløsning",
+        "state": {
+          "hourly": "Time (60 min)",
+          "quarter_hourly": "Kvarter (15 min)"
+        }
+      },
+      "latest_invoice_total": {
+        "name": "Seneste faktura i alt"
+      },
+      "outstanding_balance": {
+        "name": "Udestående saldo"
+      },
+      "next_invoice_due_date": {
+        "name": "Næste forfaldsdato"
+      },
+      "api_key_expires_at": {
+        "name": "API-nøgle udløber"
+      }
+    }
+  },
+  "services": {
+    "get_prices": {
+      "name": "Hent elpriser",
+      "description": "Returner cachelagrede elprisintervaller (og priskomponenter) for i dag og/eller i morgen uden ekstra API-kald, når de allerede er i cachen.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Integrationspost",
+          "description": "Osmund Energi-konfigurationspost (valgfri, når der kun er én konfigureret)."
+        },
+        "location_id": {
+          "name": "Lokations-ID",
+          "description": "Osmund lokations-ID (valgfri, når kun én lokation har API-adgang)."
+        },
+        "day": {
+          "name": "Dag",
+          "description": "Hvilke danske dage der skal hentes priser for."
+        },
+        "resolution": {
+          "name": "Opløsning",
+          "description": "Tilsidesæt den konfigurerede intervalopløsning (time eller kvarter)."
+        }
+      }
+    }
+  }
+}

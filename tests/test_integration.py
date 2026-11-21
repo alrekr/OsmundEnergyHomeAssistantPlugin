@@ -70,6 +70,23 @@ def test_translations_cover_all_sensor_keys_and_selectors() -> None:
         "resolution",
     }
 
+    # Verify Danish translation has exact structural & placeholder parity with English
+    da_translations = json.loads(
+        (INTEGRATION_DIR / "translations" / "da.json").read_text(encoding="utf-8")
+    )
+
+    def _collect_keys(obj: Any, prefix: str = "") -> set[str]:
+        keys: set[str] = set()
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                path = f"{prefix}.{k}" if prefix else k
+                keys.add(path)
+                keys |= _collect_keys(v, path)
+        return keys
+
+    assert _collect_keys(da_translations) == _collect_keys(translations)
+    assert "{api_url}" in da_translations["config"]["step"]["user"]["description"]
+
 
 def _install_minimal_ha_stubs() -> dict[str, types.ModuleType | None]:
     """Install tiny Home Assistant stubs so coordinator & diagnostics can be tested."""
