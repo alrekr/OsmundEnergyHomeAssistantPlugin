@@ -8,7 +8,7 @@ import json
 import sys
 import types
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -39,6 +39,8 @@ def test_translations_cover_all_sensor_keys_and_selectors() -> None:
     assert not missing, f"Missing sensor translations: {missing}"
 
     # Verify enum states are lowercase and present
+    for state in ("active", "upcoming", "pending", "ended"):
+        assert state in en_sensors["supply_state"]["state"]
     for state in ("included", "trial", "active", "none"):
         assert state in en_sensors["plus_status"]["state"]
     for state in ("hourly", "quarter_hourly"):
@@ -132,7 +134,13 @@ def _install_minimal_ha_stubs() -> dict[str, types.ModuleType | None]:
         return data
 
     _register("homeassistant")
-    _register("homeassistant.const", {"CONF_API_KEY": "api_key"})
+    class _UnitOfEnergy:
+        KILO_WATT_HOUR = "kWh"
+
+    _register(
+        "homeassistant.const",
+        {"CONF_API_KEY": "api_key", "UnitOfEnergy": _UnitOfEnergy},
+    )
     _register(
         "homeassistant.core",
         {"HomeAssistant": object, "callback": lambda fn: fn},
@@ -211,7 +219,9 @@ async def test_diagnostics_redacts_api_key_and_optional_labels() -> None:
     """Verify diagnostics always redacts api_key and honors label redaction option."""
     saved = _install_minimal_ha_stubs()
     try:
-        mods = _load_pkg_modules("const", "api", "coordinator", "diagnostics")
+        mods = _load_pkg_modules(
+            "const", "api", "statistics", "coordinator", "diagnostics"
+        )
         api = mods["api"]
         coord = mods["coordinator"]
         diag = mods["diagnostics"]
@@ -308,7 +318,7 @@ async def test_price_coordinator_cache_and_zero_call_service() -> None:
     """Verify price coordinator caches days and serves get_prices without API calls."""
     saved = _install_minimal_ha_stubs()
     try:
-        mods = _load_pkg_modules("const", "api", "coordinator")
+        mods = _load_pkg_modules("const", "api", "statistics", "coordinator")
         api = mods["api"]
         coord = mods["coordinator"]
 
@@ -440,7 +450,7 @@ async def test_account_coordinator_cursor_gating() -> None:
     """Verify consumption/costs only re-fetch when cursors advance or day changes."""
     saved = _install_minimal_ha_stubs()
     try:
-        mods = _load_pkg_modules("const", "api", "coordinator")
+        mods = _load_pkg_modules("const", "api", "statistics", "coordinator")
         api = mods["api"]
         coord = mods["coordinator"]
 
@@ -588,3 +598,121 @@ async def test_account_coordinator_cursor_gating() -> None:
         }
     finally:
         _restore_modules(saved)
+
+
+def test_statistics_slug_window_and_cumulative_sums() -> None:
+    """Verify Energy Dashboard external statistics helpers, DST, and anchor sums."""
+    saved = _install_minimal_ha_stubs()
+    try:
+        mods = _load_pkg_modules("const", "api", "statistics")
+        api = mods["api"]
+        stats = mods["statistics"]
+        cph = ZoneInfo("Europe/Copenhagen")
+
+        loc_id = "01a1faca-3a2e-7407-a556-559f006e2f31"
+        assert (
+            stats.consumption_statistic_id(loc_id)
+            == "osmund_energi:01a1faca_3a2e_7407_a556_559f006e2f31_energy_consumption"
+        )
+        assert (
+            stats.cost_statistic_id(loc_id)
+            == "osmund_energi:01a1faca_3a2e_7407_a556_559f006e2f31_energy_cost"
+        )
+
+        # Initial backfill window (30 days) vs incremental 5-day lookback
+        assert stats.compute_hourly_consumption_window(
+            date(2026, 11, 22), None, cph
+        ) == (date(2026, 10, 23), date(2026, 11, 22))
+        assert stats.compute_hourly_consumption_window(
+            date(2026, 11, 22),
+            datetime(2026, 11, 20, 22, 0, tzinfo=UTC),
+            cph,
+        ) == (date(2026, 11, 15), date(2026, 11, 22))
+
+        # DST fall-back day (2026-10-25): 02:00+02:00 and 02:00+01:00 are distinct UTC
+        values = [
+            api.ConsumptionValue.from_dict(
+                {
+                    "start": "2026-10-25T01:00:00+02:00",
+                    "end": "2026-10-25T02:00:00+02:00",
+                    "kwh": 1.0,
+                }
+            ),
+            api.ConsumptionValue.from_dict(
+                {
+                    "start": "2026-10-25T02:00:00+02:00",
+                    "end": "2026-10-25T02:00:00+01:00",
+                    "kwh": 1.5,
+                }
+            ),
+            api.ConsumptionValue.from_dict(
+                {
+                    "start": "2026-10-25T02:00:00+01:00",
+                    "end": "2026-10-25T03:00:00+01:00",
+                    "kwh": 2.0,
+                }
+            ),
+        ]
+        # Anchor at 23:00Z excludes the first reading (01:00+02:00 == 23:00Z)
+        rows = stats.build_consumption_statistics(
+            values,
+            anchor_start_utc=datetime(2026, 10, 24, 23, 0, tzinfo=UTC),
+            anchor_sum=10.0,
+        )
+        assert len(rows) == 2
+        assert rows[0]["start"] == datetime(2026, 10, 25, 0, 0, tzinfo=UTC)
+        assert rows[0]["sum"] == 11.5
+        assert rows[1]["start"] == datetime(2026, 10, 25, 1, 0, tzinfo=UTC)
+        assert rows[1]["sum"] == 13.5
+
+        # Daily rated cost statistics placed at Danish midnight -> UTC top-of-hour
+        cost_days = [
+            api.RatedCostDay.from_dict(
+                {
+                    "date": "2026-11-21",
+                    "kwh": 12.0,
+                    "exVat": 16.0,
+                    "incVat": 20.0,
+                    "subscriptions": {"exVat": 3.0, "incVat": 3.75},
+                    "totalWithSubscriptions": {"exVat": 19.0, "incVat": 23.75},
+                    "components": [],
+                }
+            ),
+            api.RatedCostDay.from_dict(
+                {
+                    "date": "2026-11-22",
+                    "kwh": 10.0,
+                    "exVat": 14.0,
+                    "incVat": 17.5,
+                    "subscriptions": {"exVat": 3.0, "incVat": 3.75},
+                    "totalWithSubscriptions": {"exVat": 17.0, "incVat": 21.25},
+                    "components": [],
+                }
+            ),
+        ]
+        cost_rows = stats.build_cost_statistics(
+            cost_days,
+            anchor_start_utc=None,
+            anchor_sum=0.0,
+            tz=cph,
+        )
+        assert len(cost_rows) == 2
+        assert cost_rows[0]["start"] == datetime(2026, 11, 20, 23, 0, tzinfo=UTC)
+        assert cost_rows[0]["state"] == 23.75
+        assert cost_rows[0]["sum"] == 23.75
+        assert cost_rows[1]["start"] == datetime(2026, 11, 21, 23, 0, tzinfo=UTC)
+        assert cost_rows[1]["sum"] == 45.0
+    finally:
+        _restore_modules(saved)
+
+
+def test_brand_icons_present_and_valid_png() -> None:
+    """Verify HACS brand icons exist with exact 256x256 and 512x512 PNG headers."""
+    import struct
+
+    for filename, expected_size in (("icon.png", 256), ("icon@2x.png", 512)):
+        path = INTEGRATION_DIR / "brand" / filename
+        data = path.read_bytes()
+        assert data[:8] == b"\x89PNG\r\n\x1a\n"
+        width, height = struct.unpack(">II", data[16:24])
+        assert (width, height) == (expected_size, expected_size)

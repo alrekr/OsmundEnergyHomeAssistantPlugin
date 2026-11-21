@@ -87,25 +87,25 @@
         "name": "Next electricity price"
       },
       "today_min_price": {
-        "name": "Today's lowest price"
+        "name": "Lowest price today"
       },
       "today_min_price_at": {
-        "name": "Today's lowest price time"
+        "name": "Lowest price time today"
       },
       "today_max_price": {
-        "name": "Today's highest price"
+        "name": "Highest price today"
       },
       "today_avg_price": {
-        "name": "Today's average price"
+        "name": "Average price today"
       },
       "tomorrow_min_price": {
-        "name": "Tomorrow's lowest price"
+        "name": "Lowest price tomorrow"
       },
       "tomorrow_max_price": {
-        "name": "Tomorrow's highest price"
+        "name": "Highest price tomorrow"
       },
       "tomorrow_avg_price": {
-        "name": "Tomorrow's average price"
+        "name": "Average price tomorrow"
       },
       "latest_daily_consumption": {
         "name": "Latest daily consumption"
@@ -133,6 +133,15 @@
       },
       "rated_through": {
         "name": "Rated cost data through"
+      },
+      "supply_state": {
+        "name": "Supply state",
+        "state": {
+          "active": "Active",
+          "upcoming": "Upcoming",
+          "pending": "Pending",
+          "ended": "Ended"
+        }
       },
       "plus_status": {
         "name": "Osmund Plus status",

@@ -44,9 +44,17 @@ Verify your own API key against the live Osmund Energi API (reads `OSMUND_API_KE
 uv run python scripts/smoke_test.py
 ```
 
+## Features
+
+- **Electricity prices (per location)**: Current price (incl./excl. VAT), spot price, combined grid tariff, next interval price, daily min/max/average for today and tomorrow, and `Lowest price time today` timestamp. Supports automatic (`PT15M` / `PT1H` following meter resolution) or manual resolution via Options, with local quarter-hour transitions using 0 extra API calls.
+- **Full price curve action (`osmund_energi.get_prices`)**: Returns cached intervals and cost components (`spot`, `tariff`, `tax`, `supplier`) for today and/or tomorrow with 0 extra API calls when cached.
+- **Consumption, Standby & Rated Costs**: Cursor-gated polling (`consumptionThrough` / `ratedThrough`) plus monthly standby power and account invoice tracking.
+- **Energy Dashboard historical statistics**: Automatically imports delayed hourly (`PT1H`) consumption and daily rated costs into Home Assistant long-term statistics (`osmund_energi:<location_id>_energy_consumption` and `osmund_energi:<location_id>_energy_cost`), aligned to their exact historical timestamps.
+- **Privacy-aware diagnostics**: Always redacts your API key, with an install/options toggle to also redact location labels.
+
 ## Installation (Home Assistant Marketplace / HACS)
 
-Once entities are implemented, you can add this repository as a custom integration repository in the Home Assistant Marketplace (or HACS on Home Assistant < 2026.11):
+You can add this repository as a custom integration repository in the Home Assistant Marketplace (or HACS on Home Assistant < 2026.11):
 
 1. Open **Marketplace** (or **HACS**) in Home Assistant.
 2. Select **Add from link** (or **Custom repositories**) and enter `alrekr/OsmundEnergyHomeAssistantPlugin` with category **Integration**.

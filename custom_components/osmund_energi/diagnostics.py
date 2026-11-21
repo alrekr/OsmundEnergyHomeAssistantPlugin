@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant
 
 from . import OsmundConfigEntry
 from .const import CONF_REDACT_LOCATION_LABELS, DEFAULT_REDACT_LOCATION_LABELS
+from .statistics import consumption_statistic_id, cost_statistic_id
 
 BASE_TO_REDACT = {CONF_API_KEY}
 
@@ -88,6 +89,10 @@ async def async_get_config_entry_diagnostics(
             standby = account_data.standby.get(loc.id)
             rated = account_data.rated_cost.get(loc.id)
             metered_summary[loc.id] = {
+                "statistics_ids": {
+                    "consumption": consumption_statistic_id(loc.id),
+                    "cost": cost_statistic_id(loc.id),
+                },
                 "consumption": (
                     {
                         "from": consumption.date_from,

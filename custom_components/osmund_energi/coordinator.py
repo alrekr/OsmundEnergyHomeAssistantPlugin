@@ -41,6 +41,15 @@ from .const import (
     SCOPE_COSTS_READ,
     SCOPE_PRICES_READ,
 )
+from .statistics import (
+    STATISTICS_LOOKBACK_DAYS,
+    async_get_last_statistic_utc,
+    async_import_consumption_statistics,
+    async_import_cost_statistics,
+    compute_hourly_consumption_window,
+    consumption_statistic_id,
+    cost_statistic_id,
+)
 
 if TYPE_CHECKING:
     from . import OsmundConfigEntry
@@ -215,7 +224,9 @@ class OsmundAccountCoordinator(DataUpdateCoordinator[AccountData]):
 
             await self._async_refresh_consumption(loc, today_dk, today_str)
             await self._async_refresh_standby(loc, today_str)
-            await self._async_refresh_rated_cost(loc, current_month_str, today_str)
+            await self._async_refresh_rated_cost(
+                loc, today_dk, current_month_str, today_str
+            )
 
         if open_locations and not self.rate_limit_gate.is_cooling_down(
             dt_util.utcnow()
@@ -286,6 +297,55 @@ class OsmundAccountCoordinator(DataUpdateCoordinator[AccountData]):
         self._last_consumption_through[loc_id] = loc.consumption_through
         self._last_consumption_daily_date[loc_id] = today_str
 
+        # Import hourly historical consumption into Energy Dashboard statistics
+        if loc.consumption_through is not None and self.hass is not None:
+            await self._async_sync_consumption_statistics(loc, today_dk)
+
+    async def _async_sync_consumption_statistics(
+        self,
+        loc: Location,
+        today_dk: date,
+    ) -> None:
+        """Fetch PT1H consumption and import into HA external statistics."""
+        if self.rate_limit_gate.is_cooling_down(dt_util.utcnow()):
+            return
+
+        tz = dt_util.get_time_zone(DANISH_TZ_NAME) or dt_util.DEFAULT_TIME_ZONE
+        stat_id = consumption_statistic_id(loc.id)
+        try:
+            last_stat_utc = await async_get_last_statistic_utc(self.hass, stat_id)
+            hourly_from, hourly_to = compute_hourly_consumption_window(
+                today_dk, last_stat_utc, tz
+            )
+            hourly = await self.client.async_get_consumption(
+                loc.id,
+                date_from=hourly_from.isoformat(),
+                date_to=hourly_to.isoformat(),
+                resolution="PT1H",
+            )
+            await async_import_consumption_statistics(self.hass, loc, hourly.values)
+        except OsmundAuthError as err:
+            raise ConfigEntryAuthFailed(
+                "Osmund Energi API key is invalid, expired, or revoked"
+            ) from err
+        except (OsmundRateLimitError, OsmundConnectionError) as err:
+            self.rate_limit_gate.trigger(dt_util.utcnow(), err.retry_after)
+            _LOGGER.warning(
+                "Rate-limited/unavailable fetching hourly consumption for %s: %s",
+                loc.id,
+                err,
+            )
+        except (OsmundScopeError, OsmundAccessError) as err:
+            self._log_scope_or_access_once(f"consumption_stats:{loc.id}", err)
+        except OsmundApiError as err:
+            _LOGGER.warning(
+                "Error fetching hourly consumption for %s: %s", loc.id, err
+            )
+        except Exception:
+            _LOGGER.exception(
+                "Unexpected error importing consumption statistics for %s", loc.id
+            )
+
     async def _async_refresh_standby(self, loc: Location, today_str: str) -> None:
         """Refresh monthly standby power once per Danish day."""
         if not self.key_details.has_scope(SCOPE_CONSUMPTION_READ):
@@ -323,6 +383,7 @@ class OsmundAccountCoordinator(DataUpdateCoordinator[AccountData]):
     async def _async_refresh_rated_cost(
         self,
         loc: Location,
+        today_dk: date,
         current_month_str: str,
         today_str: str,
     ) -> None:
@@ -339,6 +400,7 @@ class OsmundAccountCoordinator(DataUpdateCoordinator[AccountData]):
         if not needs_fetch:
             return
 
+        prev_month_cost: RatedCost | None = None
         try:
             current_month = await self.client.async_get_rated_cost(
                 loc_id, month=current_month_str
@@ -353,10 +415,10 @@ class OsmundAccountCoordinator(DataUpdateCoordinator[AccountData]):
                 and len(loc.rated_through) >= 7
                 and loc.rated_through[:7] != current_month_str
             ):
-                prev_month = await self.client.async_get_rated_cost(
+                prev_month_cost = await self.client.async_get_rated_cost(
                     loc_id, month=loc.rated_through[:7]
                 )
-                latest_day = prev_month.latest_day
+                latest_day = prev_month_cost.latest_day
         except OsmundAuthError as err:
             raise ConfigEntryAuthFailed(
                 "Osmund Energi API key is invalid, expired, or revoked"
@@ -380,6 +442,64 @@ class OsmundAccountCoordinator(DataUpdateCoordinator[AccountData]):
         )
         self._last_rated_through[loc_id] = loc.rated_through
         self._last_rated_daily_date[loc_id] = today_str
+
+        if loc.rated_through is not None and self.hass is not None:
+            await self._async_sync_cost_statistics(
+                loc, today_dk, current_month, prev_month_cost
+            )
+
+    async def _async_sync_cost_statistics(
+        self,
+        loc: Location,
+        today_dk: date,
+        current_month: RatedCost,
+        prev_month_cost: RatedCost | None,
+    ) -> None:
+        """Import daily rated costs into HA external statistics."""
+        stat_id = cost_statistic_id(loc.id)
+        try:
+            last_stat_utc = await async_get_last_statistic_utc(self.hass, stat_id)
+            prev_month_str = (today_dk.replace(day=1) - timedelta(days=1)).strftime(
+                "%Y-%m"
+            )
+            need_prev_month = (
+                last_stat_utc is None or today_dk.day <= STATISTICS_LOOKBACK_DAYS
+            )
+            if (
+                need_prev_month
+                and (prev_month_cost is None or prev_month_cost.month != prev_month_str)
+                and not self.rate_limit_gate.is_cooling_down(dt_util.utcnow())
+            ):
+                prev_month_cost = await self.client.async_get_rated_cost(
+                    loc.id, month=prev_month_str
+                )
+
+            days: list[RatedCostDay] = []
+            if prev_month_cost is not None:
+                days.extend(prev_month_cost.days)
+            days.extend(current_month.days)
+            await async_import_cost_statistics(self.hass, loc, days)
+        except OsmundAuthError as err:
+            raise ConfigEntryAuthFailed(
+                "Osmund Energi API key is invalid, expired, or revoked"
+            ) from err
+        except (OsmundRateLimitError, OsmundConnectionError) as err:
+            self.rate_limit_gate.trigger(dt_util.utcnow(), err.retry_after)
+            _LOGGER.warning(
+                "Rate-limited/unavailable fetching prior rated cost for %s: %s",
+                loc.id,
+                err,
+            )
+        except (OsmundScopeError, OsmundAccessError) as err:
+            self._log_scope_or_access_once(f"cost_stats:{loc.id}", err)
+        except OsmundApiError as err:
+            _LOGGER.warning(
+                "Error fetching prior rated cost for %s: %s", loc.id, err
+            )
+        except Exception:
+            _LOGGER.exception(
+                "Unexpected error importing cost statistics for %s", loc.id
+            )
 
     async def _async_refresh_invoices(self, now_utc: datetime) -> None:
         """Refresh account invoices on startup and every 6 hours."""

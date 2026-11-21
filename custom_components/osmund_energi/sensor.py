@@ -52,6 +52,7 @@ PLAN_DISPLAY_NAMES = {
 }
 
 PLUS_STATUS_OPTIONS = ["included", "trial", "active", "none"]
+SUPPLY_STATE_OPTIONS = ["active", "upcoming", "pending", "ended"]
 METER_RESOLUTION_OPTIONS = [
     OPTION_RESOLUTION_QUARTER_HOURLY,
     OPTION_RESOLUTION_HOURLY,
@@ -441,6 +442,17 @@ LOCATION_SENSOR_DESCRIPTIONS: tuple[OsmundLocationSensorDescription, ...] = (
         entity_category=EntityCategory.DIAGNOSTIC,
         required_scope=SCOPE_COSTS_READ,
         value_fn=lambda _data, loc: parse_iso_date(loc.rated_through),
+    ),
+    OsmundLocationSensorDescription(
+        key="supply_state",
+        translation_key="supply_state",
+        device_class=SensorDeviceClass.ENUM,
+        options=SUPPLY_STATE_OPTIONS,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda _data, loc: (
+            loc.state if loc.state in SUPPLY_STATE_OPTIONS else None
+        ),
     ),
     OsmundLocationSensorDescription(
         key="plus_status",

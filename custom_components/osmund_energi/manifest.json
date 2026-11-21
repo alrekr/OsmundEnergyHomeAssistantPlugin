@@ -1,6 +1,9 @@
 {
   "domain": "osmund_energi",
   "name": "Osmund Energi",
+  "after_dependencies": [
+    "recorder"
+  ],
   "categories": [
     "energy.energy_prices",
     "energy.meters_monitoring"
