@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Connect to Osmund Energi",
-        "description": "Enter your personal Osmund Energi API key created on My page (https://osmundenergi.dk/min-side#api). Requires Osmund Plus on at least one location.",
+        "description": "Enter your personal Osmund Energi API key created on My page ({api_url}). Requires Osmund Plus on at least one location.",
         "data": {
           "api_key": "API key"
         },
