@@ -1,0 +1,30 @@
+get_prices:
+  fields:
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: osmund_energi
+    location_id:
+      required: false
+      example: "0192f3a1-7c2e-7b1a-9d3e-2f6a8c1e4b10"
+      selector:
+        text:
+    day:
+      required: false
+      default: today
+      selector:
+        select:
+          options:
+            - today
+            - tomorrow
+            - both
+          translation_key: service_price_day
+    resolution:
+      required: false
+      selector:
+        select:
+          options:
+            - hourly
+            - quarter_hourly
+          translation_key: service_price_resolution

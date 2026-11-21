@@ -5,10 +5,12 @@
         "title": "Connect to Osmund Energi",
         "description": "Enter your personal Osmund Energi API key created on My page ({api_url}). Requires Osmund Plus on at least one location.",
         "data": {
-          "api_key": "API key"
+          "api_key": "API key",
+          "redact_location_labels": "Redact location labels in diagnostics"
         },
         "data_description": {
-          "api_key": "Your personal Osmund Energi API key starting with osm_."
+          "api_key": "Your personal Osmund Energi API key starting with osm_.",
+          "redact_location_labels": "Hide location labels when exporting diagnostics (recommended if your app label contains a street address)."
         }
       },
       "reauth_confirm": {
@@ -28,6 +30,162 @@
     "abort": {
       "already_configured": "This Osmund Energi API key is already configured.",
       "reauth_successful": "Reauthentication was successful."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Osmund Energi options",
+        "data": {
+          "price_resolution": "Electricity price resolution",
+          "redact_location_labels": "Redact location labels in diagnostics"
+        },
+        "data_description": {
+          "price_resolution": "Auto follows each location's meter resolution (15-minute or hourly) and falls back to hourly.",
+          "redact_location_labels": "Hide location labels when exporting diagnostics (recommended if your app label contains a street address)."
+        }
+      }
+    }
+  },
+  "selector": {
+    "price_resolution": {
+      "options": {
+        "auto": "Automatic (follow meter resolution)",
+        "hourly": "Hourly (60 min)",
+        "quarter_hourly": "Quarter-hourly (15 min)"
+      }
+    },
+    "service_price_day": {
+      "options": {
+        "today": "Today",
+        "tomorrow": "Tomorrow",
+        "both": "Today and tomorrow"
+      }
+    },
+    "service_price_resolution": {
+      "options": {
+        "hourly": "Hourly (60 min)",
+        "quarter_hourly": "Quarter-hourly (15 min)"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "current_price": {
+        "name": "Current electricity price"
+      },
+      "current_price_ex_vat": {
+        "name": "Current electricity price (excl. VAT)"
+      },
+      "current_spot_price": {
+        "name": "Current spot price"
+      },
+      "current_tariff": {
+        "name": "Current grid tariff"
+      },
+      "next_price": {
+        "name": "Next electricity price"
+      },
+      "today_min_price": {
+        "name": "Today's lowest price"
+      },
+      "today_min_price_at": {
+        "name": "Today's lowest price time"
+      },
+      "today_max_price": {
+        "name": "Today's highest price"
+      },
+      "today_avg_price": {
+        "name": "Today's average price"
+      },
+      "tomorrow_min_price": {
+        "name": "Tomorrow's lowest price"
+      },
+      "tomorrow_max_price": {
+        "name": "Tomorrow's highest price"
+      },
+      "tomorrow_avg_price": {
+        "name": "Tomorrow's average price"
+      },
+      "latest_daily_consumption": {
+        "name": "Latest daily consumption"
+      },
+      "current_month_consumption": {
+        "name": "Current month consumption"
+      },
+      "consumption_through": {
+        "name": "Consumption data through"
+      },
+      "standby_power": {
+        "name": "Standby power"
+      },
+      "current_month_cost": {
+        "name": "Current month cost"
+      },
+      "current_month_consumption_cost": {
+        "name": "Current month consumption cost"
+      },
+      "current_month_subscriptions_cost": {
+        "name": "Current month subscriptions cost"
+      },
+      "latest_daily_cost": {
+        "name": "Latest daily cost"
+      },
+      "rated_through": {
+        "name": "Rated cost data through"
+      },
+      "plus_status": {
+        "name": "Osmund Plus status",
+        "state": {
+          "included": "Included",
+          "trial": "Trial",
+          "active": "Active",
+          "none": "None"
+        }
+      },
+      "meter_resolution": {
+        "name": "Meter resolution",
+        "state": {
+          "hourly": "Hourly (60 min)",
+          "quarter_hourly": "Quarter-hourly (15 min)"
+        }
+      },
+      "latest_invoice_total": {
+        "name": "Latest invoice total"
+      },
+      "outstanding_balance": {
+        "name": "Outstanding balance"
+      },
+      "next_invoice_due_date": {
+        "name": "Next invoice due date"
+      },
+      "api_key_expires_at": {
+        "name": "API key expiry"
+      }
+    }
+  },
+  "services": {
+    "get_prices": {
+      "name": "Get electricity prices",
+      "description": "Return cached electricity price intervals (and cost components) for today and/or tomorrow without making extra API calls when already cached.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Integration entry",
+          "description": "Osmund Energi config entry (optional when only one is configured)."
+        },
+        "location_id": {
+          "name": "Location ID",
+          "description": "Osmund location ID (optional when only one location has API access)."
+        },
+        "day": {
+          "name": "Day",
+          "description": "Which Danish day(s) to return prices for."
+        },
+        "resolution": {
+          "name": "Resolution",
+          "description": "Override the configured interval resolution (hourly or quarter-hourly)."
+        }
+      }
     }
   }
 }

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime
 from typing import Any
 
 import aiohttp
@@ -226,3 +227,274 @@ async def test_network_error_raises_connection_error(osmund_api: Any) -> None:
     )
     with pytest.raises(osmund_api.OsmundConnectionError):
         await client.async_get_key_details()
+
+
+def test_location_resolution_and_display_name(osmund_api: Any) -> None:
+    """Verify auto/explicit price resolution and fallback display name."""
+    loc_15m = osmund_api.Location.from_dict(
+        {
+            "id": "0192f3a1-7c2e-7b1a-9d3e-2f6a8c1e4b10",
+            "label": "Hjem",
+            "priceArea": "DK1",
+            "state": "active",
+            "plan": "osmund_rolig",
+            "apiAccess": "open",
+            "plus": {"status": "included", "trialEndsOn": None, "endsOn": None},
+            "consumptionThrough": None,
+            "meterResolution": "PT15M",
+            "ratedThrough": None,
+        }
+    )
+    assert loc_15m.display_name == "Hjem"
+    assert loc_15m.resolved_price_resolution("auto") == "PT15M"
+    assert loc_15m.resolved_price_resolution("hourly") == "PT1H"
+    assert loc_15m.resolved_price_resolution("PT1H") == "PT1H"
+    assert loc_15m.resolved_price_resolution("quarter_hourly") == "PT15M"
+
+    loc_no_label = osmund_api.Location.from_dict(
+        {
+            "id": "0192f3a1-9a41-7d02-8c11-5b7e3d2f6a22",
+            "label": None,
+            "priceArea": "DK2",
+            "state": "active",
+            "plan": None,
+            "apiAccess": "open",
+            "plus": {"status": "active", "trialEndsOn": None, "endsOn": None},
+            "consumptionThrough": None,
+            "meterResolution": None,
+            "ratedThrough": None,
+        }
+    )
+    assert loc_no_label.display_name == "Location 0192f3a1"
+    assert loc_no_label.resolved_price_resolution("auto") == "PT1H"
+
+
+async def test_get_prices_and_interval_helpers(osmund_api: Any) -> None:
+    """Parse PriceDay and verify current/next/min/max/avg helpers."""
+    today_payload = {
+        "locationId": "loc-1",
+        "date": "2026-11-21",
+        "resolution": "PT1H",
+        "priceArea": "DK1",
+        "currency": "DKK",
+        "unit": "kr/kWh",
+        "complete": True,
+        "reason": None,
+        "intervals": [
+            {
+                "start": "2026-11-21T22:00:00+01:00",
+                "end": "2026-11-21T23:00:00+01:00",
+                "spot": 0.40,
+                "totalExVat": 0.80,
+                "totalIncVat": 1.00,
+                "components": [
+                    {"type": "spot", "description": "Spotpris", "perKwh": 0.40},
+                    {"type": "tariff", "description": "Nettarif", "perKwh": 0.25},
+                    {"type": "tariff", "description": "Systemtarif", "perKwh": 0.07},
+                    {"type": "tax", "description": "Elafgift", "perKwh": 0.08},
+                ],
+            },
+            {
+                "start": "2026-11-21T23:00:00+01:00",
+                "end": "2026-11-22T00:00:00+01:00",
+                "spot": 0.20,
+                "totalExVat": 0.60,
+                "totalIncVat": 0.75,
+                "components": [
+                    {"type": "spot", "description": "Spotpris", "perKwh": 0.20},
+                    {"type": "tariff", "description": "Nettarif", "perKwh": 0.32},
+                    {"type": "tax", "description": "Elafgift", "perKwh": 0.08},
+                ],
+            },
+        ],
+    }
+    tomorrow_payload = {
+        "locationId": "loc-1",
+        "date": "2026-11-22",
+        "resolution": "PT1H",
+        "priceArea": "DK1",
+        "currency": "DKK",
+        "unit": "kr/kWh",
+        "complete": True,
+        "reason": None,
+        "intervals": [
+            {
+                "start": "2026-11-22T00:00:00+01:00",
+                "end": "2026-11-22T01:00:00+01:00",
+                "spot": 0.15,
+                "totalExVat": 0.50,
+                "totalIncVat": 0.625,
+                "components": [],
+            }
+        ],
+    }
+
+    client = osmund_api.OsmundApiClient(
+        "osm_test", _MockSession(_MockResponse(200, today_payload))
+    )
+    today = await client.async_get_prices(
+        "loc-1", date="2026-11-21", resolution="PT1H"
+    )
+    tomorrow = osmund_api.PriceDay.from_dict(tomorrow_payload)
+
+    now_2230 = datetime.fromisoformat("2026-11-21T22:30:00+01:00")
+    cur = today.interval_at(now_2230)
+    assert cur is not None
+    assert cur.total_inc_vat == 1.00
+    assert cur.tariff_ex_vat == 0.32
+    assert cur.tax_ex_vat == 0.08
+
+    nxt = osmund_api.find_next_interval(today, tomorrow, now_2230)
+    assert nxt is not None
+    assert nxt.total_inc_vat == 0.75
+
+    # Cross midnight from today's last interval into tomorrow's first interval
+    now_2330 = datetime.fromisoformat("2026-11-21T23:30:00+01:00")
+    nxt_midnight = osmund_api.find_next_interval(today, tomorrow, now_2330)
+    assert nxt_midnight is not None
+    assert nxt_midnight.start_iso == "2026-11-22T00:00:00+01:00"
+    assert nxt_midnight.total_inc_vat == 0.625
+
+    min_iv = today.min_interval()
+    max_iv = today.max_interval()
+    assert min_iv is not None
+    assert min_iv.total_inc_vat == 0.75
+    assert min_iv.start == datetime.fromisoformat("2026-11-21T23:00:00+01:00")
+    assert max_iv is not None
+    assert max_iv.total_inc_vat == 1.00
+    assert today.avg_price_inc_vat() == 0.875
+
+    svc = today.to_service_dict()
+    assert svc["complete"] is True
+    assert len(svc["intervals"]) == 2
+    assert svc["intervals"][0]["total_inc_vat"] == 1.00
+
+
+async def test_consumption_standby_rated_cost_and_invoices(osmund_api: Any) -> None:
+    """Parse consumption, standby, rated cost, and invoice responses."""
+    consumption_payload = {
+        "locationId": "loc-1",
+        "resolution": "P1D",
+        "from": "2026-10-29",
+        "to": "2026-11-02",
+        "unit": "kWh",
+        "totalKwh": 40.5,
+        "values": [
+            {
+                "start": "2026-10-31T00:00:00+01:00",
+                "end": "2026-11-01T00:00:00+01:00",
+                "kwh": 12.0,
+            },
+            {
+                "start": "2026-11-01T00:00:00+01:00",
+                "end": "2026-11-02T00:00:00+01:00",
+                "kwh": 13.5,
+            },
+            {
+                "start": "2026-11-02T00:00:00+01:00",
+                "end": "2026-11-03T00:00:00+01:00",
+                "kwh": 15.0,
+            },
+        ],
+    }
+    client = osmund_api.OsmundApiClient(
+        "osm_test", _MockSession(_MockResponse(200, consumption_payload))
+    )
+    cons = await client.async_get_consumption(
+        "loc-1", date_from="2026-10-29", date_to="2026-11-02"
+    )
+    assert cons.latest_value is not None
+    assert cons.latest_value.kwh == 15.0
+    assert cons.latest_value.date_str == "2026-11-02"
+    # Excludes October's 12.0 kWh when computing November total
+    assert cons.total_for_month("2026-11") == 28.5
+    assert cons.total_for_month("2026-12") is None
+
+    standby = osmund_api.Standby.from_dict(
+        {
+            "locationId": "loc-1",
+            "unit": "kW",
+            "months": [
+                {"month": "2026-09", "standbyKw": 0.142},
+                {"month": "2026-10", "standbyKw": 0.151},
+            ],
+        }
+    )
+    assert standby.latest_month is not None
+    assert standby.latest_month.month == "2026-10"
+    assert standby.latest_month.standby_kw == 0.151
+
+    rated = osmund_api.RatedCost.from_dict(
+        {
+            "locationId": "loc-1",
+            "month": "2026-11",
+            "currency": "DKK",
+            "complete": False,
+            "missingDays": ["2026-11-03"],
+            "daysInMonth": 30,
+            "daysWithData": 1,
+            "totalKwh": 13.9,
+            "total": {"exVat": 18.92, "incVat": 23.65},
+            "subscriptions": {"exVat": 3.11, "incVat": 3.89},
+            "totalWithSubscriptions": {"exVat": 22.03, "incVat": 27.54},
+            "subscriptionsComplete": True,
+            "days": [
+                {
+                    "date": "2026-11-01",
+                    "kwh": 13.9,
+                    "exVat": 18.92,
+                    "incVat": 23.65,
+                    "subscriptions": {"exVat": 3.11, "incVat": 3.89},
+                    "totalWithSubscriptions": {"exVat": 22.03, "incVat": 27.54},
+                    "components": [],
+                }
+            ],
+        }
+    )
+    assert rated.total_with_subscriptions.inc_vat == 27.54
+    assert rated.latest_day is not None
+    assert rated.latest_day.date == "2026-11-01"
+
+    invoices = osmund_api.InvoiceList.from_dict(
+        {
+            "page": 1,
+            "perPage": 25,
+            "hasMore": False,
+            "invoices": [
+                {
+                    "invoiceNo": "F200",
+                    "type": "invoice",
+                    "paid": False,
+                    "invoiceDate": "2026-11-12",
+                    "dueDate": "2026-11-26",
+                    "currency": "DKK",
+                    "total": {"exVat": 400.0, "incVat": 500.0},
+                    "outstanding": 500.0,
+                },
+                {
+                    "invoiceNo": "F199",
+                    "type": "invoice",
+                    "paid": False,
+                    "invoiceDate": "2026-10-12",
+                    "dueDate": "2026-11-20",
+                    "currency": "DKK",
+                    "total": {"exVat": 200.0, "incVat": 250.0},
+                    "outstanding": 125.5,
+                },
+                {
+                    "invoiceNo": "F198",
+                    "type": "invoice",
+                    "paid": True,
+                    "invoiceDate": "2026-09-12",
+                    "dueDate": "2026-09-26",
+                    "currency": "DKK",
+                    "total": {"exVat": 100.0, "incVat": 125.0},
+                    "outstanding": 0.0,
+                },
+            ],
+        }
+    )
+    assert invoices.latest_invoice is not None
+    assert invoices.latest_invoice.invoice_no == "F200"
+    assert invoices.outstanding_balance == 625.5
+    assert invoices.next_due_date == date(2026, 11, 20)
