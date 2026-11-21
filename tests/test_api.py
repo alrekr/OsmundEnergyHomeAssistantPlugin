@@ -1,9 +1,7 @@
 """Unit tests for the Osmund Energi API client."""
 
-from __future__ import annotations
-
 from datetime import date, datetime
-from typing import Any
+from typing import Any, Self
 
 import aiohttp
 import pytest
@@ -29,7 +27,7 @@ class _MockResponse:
     async def json(self, *, content_type: str | None = None) -> Any:
         return self._payload
 
-    async def __aenter__(self) -> _MockResponse:
+    async def __aenter__(self) -> Self:
         return self
 
     async def __aexit__(self, *args: object) -> None:

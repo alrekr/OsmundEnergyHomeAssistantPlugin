@@ -1,7 +1,5 @@
 """Unit tests for translations, diagnostics redaction, and coordinator caching."""
 
-from __future__ import annotations
-
 import ast
 import importlib
 import json
@@ -97,7 +95,7 @@ def _install_minimal_ha_stubs() -> dict[str, types.ModuleType | None]:
         pass
 
     class _DataUpdateCoordinator:
-        def __class_getitem__(cls, _item: Any) -> type[_DataUpdateCoordinator]:
+        def __class_getitem__(cls, _item: Any) -> type[Any]:
             return cls
 
         def __init__(

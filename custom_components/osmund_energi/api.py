@@ -8,11 +8,9 @@ OpenAPI specification (v1.1.0-beta):
 https://osmundenergi.dk/docs/osmund-api/openapi.yaml
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from datetime import date, datetime
-from typing import Any
+from typing import Any, Self
 
 import aiohttp
 
@@ -153,7 +151,7 @@ class Amount:
     inc_vat: float
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Amount:
+    def from_dict(cls, data: dict[str, Any]) -> Self:
         return cls(
             ex_vat=float(data.get("exVat", 0.0)),
             inc_vat=float(data.get("incVat", 0.0)),
@@ -179,7 +177,7 @@ class KeyDetails:
         return parse_iso_datetime(self.expires_at)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> KeyDetails:
+    def from_dict(cls, data: dict[str, Any]) -> Self:
         key = data.get("key", data)
         return cls(
             name=str(key["name"]),
@@ -198,7 +196,7 @@ class LocationPlus:
     ends_on: str | None
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> LocationPlus:
+    def from_dict(cls, data: dict[str, Any]) -> Self:
         return cls(
             status=str(data.get("status", "unknown")),
             trial_ends_on=data.get("trialEndsOn"),
@@ -245,7 +243,7 @@ class Location:
         return PRICE_RESOLUTION_HOURLY
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Location:
+    def from_dict(cls, data: dict[str, Any]) -> Self:
         return cls(
             id=str(data["id"]),
             label=data.get("label"),
@@ -277,7 +275,7 @@ class PriceComponent:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> PriceComponent:
+    def from_dict(cls, data: dict[str, Any]) -> Self:
         return cls(
             type=str(data.get("type", "unknown")),
             description=str(data.get("description", "")),
@@ -326,7 +324,7 @@ class PriceInterval:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> PriceInterval:
+    def from_dict(cls, data: dict[str, Any]) -> Self:
         start_iso = str(data["start"])
         end_iso = str(data["end"])
         return cls(
@@ -394,7 +392,7 @@ class PriceDay:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> PriceDay:
+    def from_dict(cls, data: dict[str, Any]) -> Self:
         return cls(
             location_id=str(data["locationId"]),
             date=str(data["date"]),
@@ -443,7 +441,7 @@ class ConsumptionValue:
         return self.start_iso[:10]
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> ConsumptionValue:
+    def from_dict(cls, data: dict[str, Any]) -> Self:
         start_iso = str(data["start"])
         end_iso = str(data["end"])
         return cls(
@@ -480,7 +478,7 @@ class Consumption:
         return round(sum(matching), 4)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Consumption:
+    def from_dict(cls, data: dict[str, Any]) -> Self:
         return cls(
             location_id=str(data["locationId"]),
             resolution=str(data["resolution"]),
@@ -502,7 +500,7 @@ class StandbyMonth:
     standby_kw: float
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> StandbyMonth:
+    def from_dict(cls, data: dict[str, Any]) -> Self:
         return cls(
             month=str(data["month"]),
             standby_kw=float(data["standbyKw"]),
@@ -525,7 +523,7 @@ class Standby:
         return max(self.months, key=lambda m: m.month)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Standby:
+    def from_dict(cls, data: dict[str, Any]) -> Self:
         return cls(
             location_id=str(data["locationId"]),
             unit=str(data.get("unit", "kW")),
@@ -543,7 +541,7 @@ class CostComponent:
     inc_vat: float
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> CostComponent:
+    def from_dict(cls, data: dict[str, Any]) -> Self:
         return cls(
             type=str(data.get("type", "unknown")),
             description=str(data.get("description", "")),
@@ -565,7 +563,7 @@ class RatedCostDay:
     components: tuple[CostComponent, ...]
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> RatedCostDay:
+    def from_dict(cls, data: dict[str, Any]) -> Self:
         return cls(
             date=str(data["date"]),
             kwh=float(data.get("kwh", 0.0)),
@@ -605,7 +603,7 @@ class RatedCost:
         return self.days[-1] if self.days else None
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> RatedCost:
+    def from_dict(cls, data: dict[str, Any]) -> Self:
         return cls(
             location_id=str(data["locationId"]),
             month=str(data["month"]),
@@ -639,7 +637,7 @@ class InvoiceSummary:
     outstanding: float
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> InvoiceSummary:
+    def from_dict(cls, data: dict[str, Any]) -> Self:
         return cls(
             invoice_no=str(data["invoiceNo"]),
             type=str(data.get("type", "invoice")),
@@ -685,7 +683,7 @@ class InvoiceList:
         return min(due_dates) if due_dates else None
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> InvoiceList:
+    def from_dict(cls, data: dict[str, Any]) -> Self:
         return cls(
             invoices=tuple(
                 InvoiceSummary.from_dict(inv) for inv in data.get("invoices", ())

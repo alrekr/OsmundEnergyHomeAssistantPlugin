@@ -7,8 +7,6 @@ historical timestamps in the Energy Dashboard while staying idempotent across
 late-arriving readings and re-rated days.
 """
 
-from __future__ import annotations
-
 import logging
 from collections.abc import Sequence
 from datetime import UTC, date, datetime, time, timedelta, tzinfo
@@ -129,7 +127,7 @@ def _make_metadata(
     name: str,
     unit_of_measurement: str,
     unit_class: str | None,
-) -> StatisticMetaData:
+) -> "StatisticMetaData":
     """Construct StatisticMetaData compatible with HA 2025.1+ and 2026.x."""
     try:
         from homeassistant.components.recorder.models import (

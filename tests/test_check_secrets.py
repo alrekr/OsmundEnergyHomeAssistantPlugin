@@ -1,7 +1,5 @@
 """Unit tests for the secret-leak prevention script."""
 
-from __future__ import annotations
-
 import sys
 from pathlib import Path
 

@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """Check repository files for leaked Osmund API keys or secret files."""
 
-from __future__ import annotations
-
 import argparse
 import re
 import subprocess

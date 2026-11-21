@@ -1,7 +1,5 @@
 """DataUpdateCoordinators for the Osmund Energi integration."""
 
-from __future__ import annotations
-
 import logging
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
@@ -134,12 +132,12 @@ class LocationPrices:
 class OsmundAccountCoordinator(DataUpdateCoordinator[AccountData]):
     """Poll /locations and cursor-gated consumption, standby, costs & invoices."""
 
-    config_entry: OsmundConfigEntry
+    config_entry: "OsmundConfigEntry"
 
     def __init__(
         self,
         hass: HomeAssistant,
-        config_entry: OsmundConfigEntry,
+        config_entry: "OsmundConfigEntry",
         client: OsmundApiClient,
         key_details: KeyDetails,
         rate_limit_gate: RateLimitGate,
@@ -543,12 +541,12 @@ class OsmundAccountCoordinator(DataUpdateCoordinator[AccountData]):
 class OsmundPriceCoordinator(DataUpdateCoordinator[dict[str, LocationPrices]]):
     """Fetches & caches today and tomorrow electricity prices with minimal API calls."""
 
-    config_entry: OsmundConfigEntry
+    config_entry: "OsmundConfigEntry"
 
     def __init__(
         self,
         hass: HomeAssistant,
-        config_entry: OsmundConfigEntry,
+        config_entry: "OsmundConfigEntry",
         client: OsmundApiClient,
         account_coordinator: OsmundAccountCoordinator,
         rate_limit_gate: RateLimitGate,

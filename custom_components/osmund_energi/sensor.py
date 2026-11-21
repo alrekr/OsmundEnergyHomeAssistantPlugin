@@ -1,7 +1,5 @@
 """Sensor platform for the Osmund Energi integration."""
 
-from __future__ import annotations
-
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, datetime

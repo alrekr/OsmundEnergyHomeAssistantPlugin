@@ -1,7 +1,5 @@
 """Constants for the Osmund Energi integration."""
 
-from __future__ import annotations
-
 DOMAIN = "osmund_energi"
 
 API_BASE_URL = "https://api.osmundenergi.dk"

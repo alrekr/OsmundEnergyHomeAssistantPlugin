@@ -1,7 +1,5 @@
 """Config and options flows for the Osmund Energi integration."""
 
-from __future__ import annotations
-
 import logging
 from collections.abc import Mapping
 from typing import Any
@@ -76,7 +74,7 @@ class OsmundEnergiConfigFlow(ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(
         config_entry: ConfigEntry,
-    ) -> OsmundEnergiOptionsFlow:
+    ) -> "OsmundEnergiOptionsFlow":
         """Return the options flow for Osmund Energi."""
         return OsmundEnergiOptionsFlow()
 
